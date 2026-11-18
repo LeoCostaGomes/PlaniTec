@@ -10,6 +10,9 @@
 </head>
 <body>
 
+  <!-- TOAST NOTIFICATION FLUTUANTE -->
+  <div id="toast-notification" class="toast-notification"></div>
+
   <!-- TOPBAR -->
   <header class="topbar">
     <div class="brand-section">
@@ -65,7 +68,7 @@
             <tr>
               <th style="width: 45px; text-align: center;">#</th>
               <th style="width: 140px;">Data</th>
-              <th style="width: 150px;">Código</th>
+              <th style="width: 170px;">Categoria [Nº]</th>
               <th>Descrição (Enter para salvar)</th>
               <th style="width: 150px; text-align: right;">Valor (R$)</th>
               <th style="width: 60px; text-align: center;">Ações</th>
@@ -79,11 +82,11 @@
             <tr class="quick-add-row">
               <td style="text-align: center; font-weight: bold; color: var(--primary-green-dark);">➕</td>
               <td>
-                <input type="date" id="input-exp-date" class="excel-cell-input" title="Data do lançamento">
+                <input type="date" id="input-exp-date" class="excel-cell-input" title="Data do lançamento (detecta o mês automaticamente!)">
               </td>
               <td>
-                <select id="input-exp-code" class="excel-cell-input" title="Selecione a categoria">
-                  <!-- Categorias -->
+                <select id="input-exp-code" class="excel-cell-input" title="Selecione o número da categoria">
+                  <!-- Categorias 1 a 10 -->
                 </select>
               </td>
               <td>
@@ -112,7 +115,7 @@
           <thead>
             <tr>
               <th style="width: 45px; text-align: center;">#</th>
-              <th style="width: 160px;">Código</th>
+              <th style="width: 180px;">Categoria [Nº]</th>
               <th>Descrição (Subtraídas todo mês)</th>
               <th style="width: 170px; text-align: right;">Valor Mensal (R$)</th>
               <th style="width: 60px; text-align: center;">Ações</th>
@@ -126,7 +129,7 @@
               <td style="text-align: center; font-weight: bold; color: var(--primary-green-dark);">➕</td>
               <td>
                 <select id="input-rec-code" class="excel-cell-input">
-                  <!-- Categorias -->
+                  <!-- Categorias 1 a 10 -->
                 </select>
               </td>
               <td>
