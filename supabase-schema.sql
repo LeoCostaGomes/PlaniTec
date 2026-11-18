@@ -1,34 +1,32 @@
 -- ==============================================================================
 -- PlaniTec - Schema do Banco de Dados Supabase (PostgreSQL)
--- Projeto: Gestão Financeira Familiar Inteligente no Estilo Excel
--- Equipe: Leonardo, João Gabriel e Família
+-- Categorias com códigos numéricos (1 a 10) para digitação ultra-rápida
 -- ==============================================================================
 
--- 1. Habilitar extensão para geração de UUID
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- 2. Tabela de Categorias pré-definidas (para sugestão automática e código de categoria)
+-- 1. Tabela de Categorias
 CREATE TABLE IF NOT EXISTS categories (
     code VARCHAR(10) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Inserir categorias padrão comuns em finanças familiares
+-- Inserir categorias com números (1 a 10)
 INSERT INTO categories (code, name) VALUES
-    ('ALIM', 'Alimentação / Mercado'),
-    ('MORA', 'Moradia (Aluguel, Condomínio)'),
-    ('UTIL', 'Contas Básicas (Água, Luz, Gás, Internet)'),
-    ('TRAN', 'Transporte / Combustível'),
-    ('SAUD', 'Saúde e Farmácia'),
-    ('EDUC', 'Educação / Cursos'),
-    ('LAZE', 'Lazer e Viagens'),
-    ('VEST', 'Vestuário'),
-    ('SERV', 'Assinaturas e Serviços'),
-    ('OUTR', 'Outros')
+    ('1', 'Alimentação / Mercado'),
+    ('2', 'Moradia (Aluguel, Condomínio)'),
+    ('3', 'Contas Básicas (Água, Luz, Internet)'),
+    ('4', 'Transporte e Combustível'),
+    ('5', 'Saúde e Medicamentos'),
+    ('6', 'Educação e Cursos'),
+    ('7', 'Lazer e Viagens'),
+    ('8', 'Vestuário'),
+    ('9', 'Assinaturas e Serviços'),
+    ('10', 'Outros Gastos')
 ON CONFLICT (code) DO NOTHING;
 
--- 3. Tabela de Rendas Mensais (Salário de cada integrante da família)
+-- 2. Tabela de Rendas Mensais (Salários)
 CREATE TABLE IF NOT EXISTS monthly_incomes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     member_name VARCHAR(120) NOT NULL,
@@ -37,7 +35,7 @@ CREATE TABLE IF NOT EXISTS monthly_incomes (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 4. Tabela de Despesas Mensais Recorrentes/Fixas (subtraídas todo mês)
+-- 3. Tabela de Despesas Mensais Recorrentes/Fixas
 CREATE TABLE IF NOT EXISTS recurring_expenses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code VARCHAR(10) REFERENCES categories(code) ON DELETE SET NULL,
@@ -47,37 +45,36 @@ CREATE TABLE IF NOT EXISTS recurring_expenses (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 5. Tabela de Lançamento de Despesas do Mês (Semelhante ao Excel)
+-- 4. Tabela de Lançamento de Despesas (Excel Style)
 CREATE TABLE IF NOT EXISTS expense_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    month_ref VARCHAR(7) NOT NULL, -- Exemplo: '2026-06' para Junho de 2026
+    month_ref VARCHAR(7) NOT NULL, -- Exemplo: '2026-11'
     category_code VARCHAR(10),
     description VARCHAR(255) NOT NULL,
     amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Índices para otimização de busca e filtros por mês
+-- Índices para busca rápida
 CREATE INDEX IF NOT EXISTS idx_expense_entries_month ON expense_entries(month_ref);
 CREATE INDEX IF NOT EXISTS idx_expense_entries_category ON expense_entries(category_code);
 CREATE INDEX IF NOT EXISTS idx_expense_entries_date ON expense_entries(expense_date);
 
--- Dados de exemplo iniciais para demonstração
+-- Dados de Exemplo
 INSERT INTO monthly_incomes (member_name, amount) VALUES
     ('Salário Leonardo', 4500.00),
     ('Salário João Gabriel', 3800.00)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO recurring_expenses (code, description, amount) VALUES
-    ('MORA', 'Aluguel do Imóvel', 1800.00),
-    ('UTIL', 'Internet Fibra', 120.00),
-    ('UTIL', 'Energia Elétrica', 250.00),
-    ('SERV', 'Streaming e Assinaturas', 85.00)
+    ('2', 'Aluguel do Imóvel', 1800.00),
+    ('3', 'Internet Fibra Óptica', 120.00),
+    ('3', 'Energia Elétrica', 260.00),
+    ('9', 'Assinaturas de Streaming', 89.90)
 ON CONFLICT DO NOTHING;
 
--- Configuração de Políticas de Segurança (Row Level Security - RLS)
--- Para ambiente acadêmico / protótipo Vibe Coding, liberamos leitura e escrita pública com anon key
+-- RLS
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE monthly_incomes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recurring_expenses ENABLE ROW LEVEL SECURITY;
