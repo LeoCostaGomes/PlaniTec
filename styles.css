@@ -1,4 +1,4 @@
-/* PlaniTec - Estilo Minimalista Verde & Branco */
+/* PlaniTec - Estilo Minimalista Verde & Branco - Experiência Excel */
 :root {
   --primary-green: #22c55e;
   --primary-green-dark: #16a34a;
@@ -16,8 +16,8 @@
   --success-bg: #dcfce7;
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
   --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
 }
 
 * {
@@ -39,7 +39,7 @@ body {
 .topbar {
   background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
   color: #ffffff;
-  padding: 14px 24px;
+  padding: 12px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -56,7 +56,7 @@ body {
 }
 
 .logo-text {
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   font-weight: 800;
   letter-spacing: -0.5px;
   display: flex;
@@ -69,9 +69,8 @@ body {
   background-color: rgba(255, 255, 255, 0.25);
   padding: 2px 8px;
   border-radius: 12px;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .topbar-right {
@@ -83,22 +82,22 @@ body {
 .kpi-saldo-box {
   background: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(8px);
-  padding: 8px 16px;
-  border-radius: 12px;
+  padding: 6px 14px;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   text-align: right;
 }
 
 .kpi-saldo-label {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 700;
   text-transform: uppercase;
-  opacity: 0.9;
+  opacity: 0.95;
   letter-spacing: 0.5px;
 }
 
 .kpi-saldo-value {
-  font-size: 1.4rem;
+  font-size: 1.35rem;
   font-weight: 800;
   font-feature-settings: "tnum";
 }
@@ -107,9 +106,9 @@ body {
   background: #ffffff;
   color: var(--primary-green-dark);
   border: none;
-  padding: 8px 14px;
+  padding: 7px 14px;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.85rem;
   cursor: pointer;
   display: flex;
@@ -128,9 +127,9 @@ body {
 .main-container {
   display: flex;
   flex: 1;
-  padding: 20px;
-  gap: 20px;
-  max-width: 1400px;
+  padding: 18px;
+  gap: 18px;
+  max-width: 1440px;
   margin: 0 auto;
   width: 100%;
 }
@@ -140,15 +139,15 @@ body {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--border-excel);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-/* SIDEBAR ACTIONS (Fiel ao rascunho de tela) */
+/* SIDEBAR ACTIONS */
 .action-sidebar {
-  width: 230px;
+  width: 240px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -158,9 +157,9 @@ body {
   background: #ffffff;
   color: var(--primary-green-dark);
   border: 2px solid var(--primary-green);
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-radius: var(--radius-md);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 700;
   text-align: center;
   cursor: pointer;
@@ -176,13 +175,7 @@ body {
   background: var(--primary-green);
   color: #ffffff;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
-}
-
-.sidebar-btn.active {
-  background: var(--primary-green-dark);
-  color: #ffffff;
-  border-color: var(--primary-green-dark);
+  box-shadow: 0 4px 10px rgba(34, 197, 94, 0.25);
 }
 
 .summary-card-sidebar {
@@ -197,7 +190,7 @@ body {
 }
 
 .summary-card-title {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -219,9 +212,9 @@ body {
 
 /* HEADER DO SHEET */
 .sheet-header {
-  padding: 16px 20px;
+  padding: 14px 18px;
   background-color: #f8fafc;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-excel);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -230,7 +223,7 @@ body {
 }
 
 .sheet-title-group h2 {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: var(--text-dark);
 }
@@ -250,7 +243,7 @@ body {
 
 .filter-input, .filter-select {
   padding: 6px 10px;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   border: 1px solid var(--border-excel);
   border-radius: 6px;
   background: #ffffff;
@@ -274,39 +267,48 @@ body {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
 .excel-table thead th {
   background-color: #f1f5f9;
   color: #334155;
   font-weight: 700;
-  padding: 10px 14px;
+  padding: 8px 10px;
   border: 1px solid var(--border-excel);
   position: sticky;
   top: 0;
   z-index: 10;
-  font-size: 0.82rem;
-  letter-spacing: 0.3px;
+  font-size: 0.78rem;
   text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .excel-table tbody td {
-  padding: 8px 12px;
+  padding: 4px 6px;
   border: 1px solid var(--border-excel);
   vertical-align: middle;
+}
+
+.excel-row-idx {
+  text-align: center;
+  color: #94a3b8;
+  font-weight: 600;
+  font-size: 0.78rem;
+  background-color: #f8fafc;
+  user-select: none;
 }
 
 .excel-table tbody tr:hover {
   background-color: #f8fafc;
 }
 
-/* Células Editáveis Estilo Planilha */
+/* Células Editáveis */
 .excel-cell-input {
   width: 100%;
   border: 1px solid transparent;
-  padding: 6px 8px;
-  font-size: 0.9rem;
+  padding: 5px 6px;
+  font-size: 0.88rem;
   background: transparent;
   border-radius: 4px;
   outline: none;
@@ -316,10 +318,10 @@ body {
 .excel-cell-input:focus {
   background: #ffffff;
   border-color: var(--primary-green);
-  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
 }
 
-/* LINHA DE NOVO LANÇAMENTO (QUICK ADD NO TOPO OU RODAPÉ) */
+/* LINHA DE NOVO LANÇAMENTO (QUICK ADD) */
 .quick-add-row {
   background-color: #f0fdf4 !important;
 }
@@ -327,6 +329,7 @@ body {
 .quick-add-row td {
   border-top: 2px solid var(--primary-green) !important;
   border-bottom: 2px solid var(--primary-green) !important;
+  padding: 6px 8px !important;
 }
 
 .btn-add-row {
@@ -335,8 +338,8 @@ body {
   border: none;
   padding: 6px 12px;
   border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.9rem;
+  font-weight: 800;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -353,14 +356,23 @@ body {
   border: none;
   color: #94a3b8;
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 4px 8px;
   border-radius: 4px;
+  font-size: 1.1rem;
+  line-height: 1;
   transition: 0.2s;
 }
 
 .btn-delete-row:hover {
   color: var(--danger);
   background-color: var(--danger-light);
+}
+
+/* LINHA TOTAL EXCEL */
+.excel-total-row td {
+  background-color: #f8fafc;
+  border-top: 2px solid var(--border-excel);
+  padding: 8px 12px;
 }
 
 /* AUTOCOMPLETE SUGGESTIONS */
@@ -385,27 +397,27 @@ body {
 }
 
 .suggestion-item {
-  padding: 8px 12px;
-  font-size: 0.85rem;
+  padding: 7px 10px;
+  font-size: 0.83rem;
   cursor: pointer;
   border-bottom: 1px solid #f1f5f9;
   display: flex;
   justify-content: space-between;
 }
 
-.suggestion-item:hover, .suggestion-item.selected {
+.suggestion-item:hover {
   background-color: #dcfce7;
   color: var(--primary-green-dark);
 }
 
-/* ABAS DE MESES ESTILO PLANILHA EXCEL (NO RODAPÉ) */
+/* ABAS DE MESES ESTILO PLANILHA EXCEL */
 .excel-tabs-bar {
   background-color: #f1f5f9;
   border-top: 1px solid var(--border-excel);
   display: flex;
   align-items: center;
-  padding: 6px 12px;
-  gap: 4px;
+  padding: 4px 10px;
+  gap: 3px;
   overflow-x: auto;
   scrollbar-width: thin;
 }
@@ -414,8 +426,8 @@ body {
   background: #e2e8f0;
   border: 1px solid var(--border-excel);
   border-bottom: none;
-  padding: 6px 16px;
-  font-size: 0.82rem;
+  padding: 5px 14px;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
@@ -423,8 +435,8 @@ body {
   white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: 6px;
-  transition: all 0.2s;
+  gap: 5px;
+  transition: all 0.15s;
 }
 
 .excel-tab:hover {
@@ -437,14 +449,13 @@ body {
   color: var(--primary-green-dark);
   font-weight: 800;
   border-top: 3px solid var(--primary-green);
-  box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
 }
 
 .excel-tab .tab-badge {
   background-color: var(--lime-accent);
   color: #ffffff;
   font-size: 0.65rem;
-  padding: 1px 5px;
+  padding: 1px 4px;
   border-radius: 8px;
   font-weight: 700;
 }
@@ -454,16 +465,16 @@ body {
   border: 1px dashed var(--border-excel);
   padding: 4px 10px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--primary-green-dark);
   cursor: pointer;
   transition: 0.2s;
+  white-space: nowrap;
 }
 
 .btn-add-tab:hover {
   border-color: var(--primary-green);
-  color: var(--primary-green);
   background: #ffffff;
 }
 
