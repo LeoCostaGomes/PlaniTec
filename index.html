@@ -42,10 +42,10 @@
       <div class="sheet-header">
         <div class="sheet-title-group">
           <h2 id="sheet-title">Lançamento de Despesas</h2>
-          <p id="sheet-subtitle">Mês de referência: Junho de 2026</p>
+          <p id="sheet-subtitle">Mês selecionado: Carregando...</p>
         </div>
 
-        <!-- FILTROS (Exibidos na tela de despesas do mês) -->
+        <!-- FILTROS EXCEL -->
         <div class="filter-bar" id="expense-filters">
           <input type="text" id="filter-search" class="filter-input" placeholder="🔍 Filtrar descrição...">
           <select id="filter-category" class="filter-select">
@@ -56,46 +56,53 @@
         </div>
       </div>
 
-      <!-- TABELA ESTILO EXCEL -->
+      <!-- TABELAS ESTILO EXCEL -->
       <div class="table-container">
         
         <!-- 1. VIEW: LANÇAMENTO DE DESPESAS (Planilha Mensal) -->
         <table class="excel-table" id="table-expenses">
           <thead>
             <tr>
-              <th style="width: 130px;">Data</th>
-              <th style="width: 110px;">Código</th>
-              <th>Descrição</th>
-              <th style="width: 140px; text-align: right;">Valor (R$)</th>
-              <th style="width: 70px; text-align: center;">Ações</th>
+              <th style="width: 45px; text-align: center;">#</th>
+              <th style="width: 140px;">Data</th>
+              <th style="width: 150px;">Código</th>
+              <th>Descrição (Enter para salvar)</th>
+              <th style="width: 150px; text-align: right;">Valor (R$)</th>
+              <th style="width: 60px; text-align: center;">Ações</th>
             </tr>
           </thead>
           <tbody id="tbody-expenses">
             <!-- Linhas geradas dinamicamente -->
           </tbody>
-          <!-- Linha de inserção rápida estilo Excel -->
+          <!-- Linha de inserção rápida e Linha de Totalização Excel -->
           <tfoot>
             <tr class="quick-add-row">
+              <td style="text-align: center; font-weight: bold; color: var(--primary-green-dark);">➕</td>
               <td>
-                <input type="date" id="input-exp-date" class="excel-cell-input">
+                <input type="date" id="input-exp-date" class="excel-cell-input" title="Data do lançamento">
               </td>
               <td>
-                <select id="input-exp-code" class="excel-cell-input">
+                <select id="input-exp-code" class="excel-cell-input" title="Selecione a categoria">
                   <!-- Categorias -->
                 </select>
               </td>
               <td>
                 <div class="autocomplete-wrapper">
-                  <input type="text" id="input-exp-desc" class="excel-cell-input" placeholder="Digite a descrição (sugestão inteligente)..." autocomplete="off">
+                  <input type="text" id="input-exp-desc" class="excel-cell-input" placeholder="Nova despesa (Primeira letra maiúscula automática)..." autocomplete="off">
                   <div class="suggestion-box" id="suggestion-box"></div>
                 </div>
               </td>
               <td>
-                <input type="number" step="0.01" id="input-exp-val" class="excel-cell-input" placeholder="0,00" style="text-align: right;">
+                <input type="number" step="0.01" id="input-exp-val" class="excel-cell-input" placeholder="0,00" style="text-align: right; font-weight: 600;">
               </td>
               <td style="text-align: center;">
-                <button type="button" class="btn-add-row" id="btn-add-expense" title="Adicionar Linha">+</button>
+                <button type="button" class="btn-add-row" id="btn-add-expense" title="Adicionar Linha (Enter)">+</button>
               </td>
+            </tr>
+            <tr class="excel-total-row">
+              <td colspan="4" style="text-align: right; font-weight: 700; color: #475569;">TOTAL DO MÊS:</td>
+              <td style="text-align: right; font-weight: 800; color: #ea580c; font-size: 1rem;" id="expenses-total-cell">R$ 0,00</td>
+              <td></td>
             </tr>
           </tfoot>
         </table>
@@ -104,10 +111,11 @@
         <table class="excel-table" id="table-recurring" style="display: none;">
           <thead>
             <tr>
-              <th style="width: 130px;">Código</th>
+              <th style="width: 45px; text-align: center;">#</th>
+              <th style="width: 160px;">Código</th>
               <th>Descrição (Subtraídas todo mês)</th>
-              <th style="width: 160px; text-align: right;">Valor Mensal (R$)</th>
-              <th style="width: 70px; text-align: center;">Ações</th>
+              <th style="width: 170px; text-align: right;">Valor Mensal (R$)</th>
+              <th style="width: 60px; text-align: center;">Ações</th>
             </tr>
           </thead>
           <tbody id="tbody-recurring">
@@ -115,6 +123,7 @@
           </tbody>
           <tfoot>
             <tr class="quick-add-row">
+              <td style="text-align: center; font-weight: bold; color: var(--primary-green-dark);">➕</td>
               <td>
                 <select id="input-rec-code" class="excel-cell-input">
                   <!-- Categorias -->
@@ -137,9 +146,10 @@
         <table class="excel-table" id="table-incomes" style="display: none;">
           <thead>
             <tr>
+              <th style="width: 45px; text-align: center;">#</th>
               <th>Integrante da Família / Descrição da Renda</th>
-              <th style="width: 180px; text-align: right;">Salário Mensal (R$)</th>
-              <th style="width: 70px; text-align: center;">Ações</th>
+              <th style="width: 190px; text-align: right;">Salário Mensal (R$)</th>
+              <th style="width: 60px; text-align: center;">Ações</th>
             </tr>
           </thead>
           <tbody id="tbody-incomes">
@@ -147,8 +157,9 @@
           </tbody>
           <tfoot>
             <tr class="quick-add-row">
+              <td style="text-align: center; font-weight: bold; color: var(--primary-green-dark);">➕</td>
               <td>
-                <input type="text" id="input-inc-name" class="excel-cell-input" placeholder="Ex: Salário Leonardo, Renda Extra...">
+                <input type="text" id="input-inc-name" class="excel-cell-input" placeholder="Ex: Salário Leonardo, Salário João Gabriel...">
               </td>
               <td>
                 <input type="number" step="0.01" id="input-inc-val" class="excel-cell-input" placeholder="0,00" style="text-align: right;">
@@ -164,7 +175,7 @@
 
       <!-- ABAS MENSAIS ESTILO PLANILHA EXCEL (NO RODAPÉ) -->
       <nav class="excel-tabs-bar" id="excel-tabs-bar">
-        <!-- Gerado dinamicamente com Janeiro/26 ... Junho/26 (atual) -->
+        <!-- Gerado dinamicamente com abas mensais e botão ➕ Novo Mês -->
       </nav>
 
     </section>
@@ -219,21 +230,21 @@
         <button class="modal-close" id="btn-close-config">&times;</button>
       </div>
       <p style="font-size: 0.85rem; color: #64748b;">
-        Conecte seu banco de dados PostgreSQL do Supabase para sincronização em tempo real e em múltiplos dispositivos.
+        Conecte seu banco de dados PostgreSQL do Supabase para sincronização em nuvem e em tempo real.
       </p>
 
       <div class="form-group">
         <label for="cfg-supabase-url">Project URL (Supabase)</label>
-        <input type="text" id="cfg-supabase-url" placeholder="https://xyzcompany.supabase.co">
+        <input type="text" id="cfg-supabase-url" placeholder="https://xxxxxxxxxxxxxx.supabase.co">
       </div>
 
       <div class="form-group">
-        <label for="cfg-supabase-key">Anon Public API Key</label>
+        <label for="cfg-supabase-key">anon public API Key</label>
         <input type="password" id="cfg-supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
       </div>
 
       <div style="font-size: 0.8rem; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
-        💡 <strong>Dica da equipe:</strong> O script SQL para criar as tabelas está no arquivo <code>supabase-schema.sql</code>. Se ainda não tiver as chaves, o sistema roda automaticamente com armazenamento local!
+        💡 <strong>Dica da equipe:</strong> O script SQL para criar as tabelas está no arquivo <code>supabase-schema.sql</code>.
       </div>
 
       <div class="modal-footer">
