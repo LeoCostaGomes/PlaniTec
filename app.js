@@ -1,6 +1,7 @@
 /**
  * PlaniTec - Lógica da Aplicação (App Controller)
  * Experiência Ultra-Prática inspirada no Microsoft Excel
+ * Suporte a categorias numéricas (1 a 10) e detecção inteligente de meses
  * Equipe: Leonardo, João Gabriel e Família
  */
 
@@ -16,10 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const realCurrentMonth = today.getMonth() + 1; // 1 a 12
   const realCurrentMonthRef = `${realCurrentYear}-${String(realCurrentMonth).padStart(2, '0')}`;
 
-  // Gera a lista inicial de abas de meses com base no calendário real
+  // Gera a lista inicial de abas com base no calendário
   function generateInitialMonths() {
     const months = [];
-    // Gera do mês 1 ao 12 do ano atual
     for (let m = 1; m <= 12; m++) {
       const ref = `${realCurrentYear}-${String(m).padStart(2, '0')}`;
       const label = `${MONTH_NAMES[m - 1]}/${String(realCurrentYear).slice(-2)}`;
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Estado da Aplicação
   const state = {
     currentView: 'expenses', // 'expenses' | 'recurring' | 'incomes'
-    currentMonthRef: realCurrentMonthRef, // Inicializa exatamente no mês atual do calendário!
+    currentMonthRef: realCurrentMonthRef, // Inicia no mês real do calendário!
     months: generateInitialMonths(),
     incomes: [],
     recurringExpenses: [],
@@ -57,6 +57,9 @@ document.addEventListener('DOMContentLoaded', () => {
     btnOpenConfig: document.getElementById('btn-open-config'),
     supabaseStatusIndicator: document.getElementById('supabase-status-indicator'),
     supabaseStatusText: document.getElementById('supabase-status-text'),
+
+    // Toast Notificação
+    toastNotification: document.getElementById('toast-notification'),
 
     // Sheet Header
     sheetTitle: document.getElementById('sheet-title'),
@@ -116,7 +119,19 @@ document.addEventListener('DOMContentLoaded', () => {
     cfgSupabaseKey: document.getElementById('cfg-supabase-key')
   };
 
-  // Helper para Primeira Letra Maiúscula Automática
+  // Exibe notificação Toast flutuante
+  let toastTimeout = null;
+  function showToast(message, isWarning = false) {
+    if (!elements.toastNotification) return;
+    clearTimeout(toastTimeout);
+    elements.toastNotification.textContent = message;
+    elements.toastNotification.className = `toast-notification show ${isWarning ? 'warning' : 'success'}`;
+    toastTimeout = setTimeout(() => {
+      elements.toastNotification.className = 'toast-notification';
+    }, 4000);
+  }
+
+  // Garante Primeira Letra Maiúscula
   function capitalizeFirstLetter(str) {
     if (!str || typeof str !== 'string') return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
@@ -127,6 +142,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const num = parseFloat(val) || 0;
     return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
+
+  // Garante que uma aba de mês exista
+  function ensureMonthExists(monthRef) {
+    let existing = state.months.find(m => m.ref === monthRef);
+    if (!existing) {
+      const [y, m] = monthRef.split('-').map(Number);
+      const label = `${MONTH_NAMES[m - 1]}/${String(y).slice(-2)}`;
+      existing = {
+        ref: monthRef,
+        label,
+        isCurrent: monthRef === realCurrentMonthRef
+      };
+      state.months.push(existing);
+      // Ordena as abas cronologicamente
+      state.months.sort((a, b) => a.ref.localeCompare(b.ref));
+    }
+    return existing;
+  }
 
   // Inicialização Geral
   async function initApp() {
@@ -141,30 +174,29 @@ document.addEventListener('DOMContentLoaded', () => {
     switchView('expenses');
   }
 
-  // Preenche opções de categorias
+  // Preenche opções de categorias numéricas (1 a 10)
   function populateCategorySelects() {
-    const optionsHtml = state.categories.map(c => `<option value="${c.code}">${c.code} - ${c.name}</option>`).join('');
+    const optionsHtml = state.categories.map(c => `<option value="${c.code}">[${c.code}] ${c.name}</option>`).join('');
     elements.inputExpCode.innerHTML = optionsHtml;
     elements.inputRecCode.innerHTML = optionsHtml;
 
     elements.filterCategory.innerHTML = '<option value="">Todas as categorias</option>' + 
-      state.categories.map(c => `<option value="${c.code}">${c.code} - ${c.name}</option>`).join('');
+      state.categories.map(c => `<option value="${c.code}">[${c.code}] ${c.name}</option>`).join('');
   }
 
-  // Mantém a data de lançamento coincidente com o mês selecionado
+  // Sincroniza a data do input de despesas com o mês selecionado
   function syncExpenseDateWithMonth(monthRef) {
     const [year, month] = monthRef.split('-');
     const now = new Date();
     let day = String(now.getDate()).padStart(2, '0');
 
-    // Se o mês selecionado não for o mês corrente, define para o dia 01
     if (monthRef !== realCurrentMonthRef) {
-      day = '01';
+      day = '01'; // Se navegar para outro mês, inicia no primeiro dia do mês
     }
     elements.inputExpDate.value = `${year}-${month}-${day}`;
   }
 
-  // Carrega todos os dados do banco
+  // Carrega todos os dados
   async function loadAllData() {
     state.incomes = await window.db.getIncomes();
     state.recurringExpenses = await window.db.getRecurringExpenses();
@@ -172,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
     calculateAndRender();
   }
 
-  // Renderiza Abas de Meses Estilo Excel
+  // Renderiza Abas de Meses Estilo Planilha Excel
   function renderMonthTabs() {
     elements.excelTabsBar.innerHTML = '';
     state.months.forEach(m => {
@@ -193,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
       elements.excelTabsBar.appendChild(tab);
     });
 
-    // Botão Adicionar Mês (Correção do bug de 'Mês 9/26')
+    // Botão Adicionar Próximo Mês
     const addTabBtn = document.createElement('button');
     addTabBtn.className = 'btn-add-tab';
     addTabBtn.title = 'Adicionar próximo mês sequencial no calendário';
@@ -266,7 +298,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalExpenses = state.expenses.reduce((acc, cur) => acc + (parseFloat(cur.amount) || 0), 0);
     const availableBalance = totalIncome - totalRecurring - totalExpenses;
 
-    // Atualiza Topbar
     if (state.currentView === 'recurring') {
       elements.kpiSaldoTopbar.textContent = formatMoney(totalRecurring);
       document.querySelector('.kpi-saldo-label').textContent = 'Total Despesas Fixas';
@@ -279,7 +310,6 @@ document.addEventListener('DOMContentLoaded', () => {
       elements.kpiSaldoTopbar.style.color = availableBalance < 0 ? '#fecaca' : '#ffffff';
     }
 
-    // Atualiza Sidebar
     elements.sidebarTotalIncome.textContent = formatMoney(totalIncome);
     elements.sidebarTotalRecurring.textContent = formatMoney(totalRecurring);
     elements.sidebarTotalExpenses.textContent = formatMoney(totalExpenses);
@@ -298,14 +328,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let filtered = state.expenses.filter(e => {
       const matchSearch = !state.filters.search || e.description.toLowerCase().includes(state.filters.search.toLowerCase());
-      const matchCat = !state.filters.category || e.category_code === state.filters.category;
+      const matchCat = !state.filters.category || String(e.category_code) === String(state.filters.category);
       const val = parseFloat(e.amount) || 0;
       const matchMin = state.filters.minVal === null || val >= state.filters.minVal;
       const matchMax = state.filters.maxVal === null || val <= state.filters.maxVal;
       return matchSearch && matchCat && matchMin && matchMax;
     });
 
-    // Atualiza o Total no rodapé da tabela estilo Excel
     const sumTotal = filtered.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
     if (elements.tfootExpensesTotal) {
       elements.tfootExpensesTotal.textContent = formatMoney(sumTotal);
@@ -321,10 +350,10 @@ document.addEventListener('DOMContentLoaded', () => {
       tr.className = 'excel-row';
       tr.innerHTML = `
         <td class="excel-row-idx">${index + 1}</td>
-        <td><input type="date" class="excel-cell-input" value="${item.expense_date}" data-id="${item.id}" data-field="expense_date"></td>
+        <td><input type="date" class="excel-cell-input date-cell" value="${item.expense_date}" data-id="${item.id}" data-field="expense_date"></td>
         <td>
           <select class="excel-cell-input" data-id="${item.id}" data-field="category_code">
-            ${state.categories.map(c => `<option value="${c.code}" ${c.code === item.category_code ? 'selected' : ''}>${c.code} - ${c.name}</option>`).join('')}
+            ${state.categories.map(c => `<option value="${c.code}" ${String(c.code) === String(item.category_code) ? 'selected' : ''}>[${c.code}] ${c.name}</option>`).join('')}
           </select>
         </td>
         <td><input type="text" class="excel-cell-input desc-cell" value="${item.description}" data-id="${item.id}" data-field="description"></td>
@@ -334,12 +363,13 @@ document.addEventListener('DOMContentLoaded', () => {
         </td>
       `;
 
-      // Auto-capitalização e edição em tempo real nas células
+      // Auto-capitalização ao digitar
       const descInput = tr.querySelector('.desc-cell');
       descInput.addEventListener('input', (e) => {
         e.target.value = capitalizeFirstLetter(e.target.value);
       });
 
+      // Inline edits estilo Excel com Detecção Automática de Mês!
       tr.querySelectorAll('.excel-cell-input').forEach(input => {
         input.addEventListener('change', async (ev) => {
           const id = ev.target.dataset.id;
@@ -348,15 +378,30 @@ document.addEventListener('DOMContentLoaded', () => {
           if (field === 'description') val = capitalizeFirstLetter(val);
 
           const targetItem = state.expenses.find(i => i.id === id);
-          if (targetItem) {
-            targetItem[field] = field === 'amount' ? parseFloat(val) || 0 : val;
-            // Se mudou a data, sincroniza month_ref
-            if (field === 'expense_date' && val) {
-              targetItem.month_ref = val.substring(0, 7);
+          if (!targetItem) return;
+
+          // Se o usuário alterou a DATA para outro mês na própria célula
+          if (field === 'expense_date' && val) {
+            const newMonthRef = val.substring(0, 7);
+            if (newMonthRef !== state.currentMonthRef) {
+              ensureMonthExists(newMonthRef);
+              targetItem.expense_date = val;
+              targetItem.month_ref = newMonthRef;
+              await window.db.saveExpense(targetItem);
+
+              // Remove da aba atual e avisa o usuário
+              state.expenses = state.expenses.filter(i => i.id !== id);
+              calculateAndRender();
+
+              const [y, m] = newMonthRef.split('-').map(Number);
+              showToast(`📅 Data alterada! A despesa foi movida automaticamente para a aba de ${MONTH_NAMES[m - 1]}/${String(y).slice(-2)}.`);
+              return;
             }
-            await window.db.saveExpense(targetItem);
-            calculateAndRender();
           }
+
+          targetItem[field] = field === 'amount' ? parseFloat(val) || 0 : val;
+          await window.db.saveExpense(targetItem);
+          calculateAndRender();
         });
       });
 
@@ -388,7 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td class="excel-row-idx">${index + 1}</td>
         <td>
           <select class="excel-cell-input" data-id="${item.id}" data-field="code">
-            ${state.categories.map(c => `<option value="${c.code}" ${c.code === item.code ? 'selected' : ''}>${c.code} - ${c.name}</option>`).join('')}
+            ${state.categories.map(c => `<option value="${c.code}" ${String(c.code) === String(item.code) ? 'selected' : ''}>[${c.code}] ${c.name}</option>`).join('')}
           </select>
         </td>
         <td><input type="text" class="excel-cell-input desc-cell" value="${item.description}" data-id="${item.id}" data-field="description"></td>
@@ -485,18 +530,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Autocomplete Inteligente
+  // Base de Sugestões com Categorias Numéricas
   const suggestionsDatabase = [
-    { desc: 'Supermercado Mensal', code: 'ALIM', val: 650.00 },
-    { desc: 'Padaria e Café', code: 'ALIM', val: 28.50 },
-    { desc: 'Farmácia e Medicamentos', code: 'SAUD', val: 85.00 },
-    { desc: 'Gasolina / Combustível', code: 'TRAN', val: 150.00 },
-    { desc: 'Uber / Aplicativo de Transporte', code: 'TRAN', val: 32.00 },
-    { desc: 'Restaurante em Família', code: 'LAZE', val: 120.00 },
-    { desc: 'Pizzaria / Delivery', code: 'LAZE', val: 95.00 },
-    { desc: 'Manutenção Doméstica', code: 'MORA', val: 140.00 },
-    { desc: 'Energia Elétrica', code: 'UTIL', val: 220.00 },
-    { desc: 'Conta de Água', code: 'UTIL', val: 95.00 }
+    { desc: 'Supermercado Mensal', code: '1', val: 650.00 },
+    { desc: 'Padaria e Café da Manhã', code: '1', val: 28.50 },
+    { desc: 'Aluguel / Condomínio', code: '2', val: 1800.00 },
+    { desc: 'Energia Elétrica (Luz)', code: '3', val: 220.00 },
+    { desc: 'Conta de Água e Esgoto', code: '3', val: 95.00 },
+    { desc: 'Internet Fibra Óptica', code: '3', val: 120.00 },
+    { desc: 'Gasolina / Posto de Combustível', code: '4', val: 150.00 },
+    { desc: 'Uber / Transporte Aplicativo', code: '4', val: 32.00 },
+    { desc: 'Farmácia e Medicamentos', code: '5', val: 85.00 },
+    { desc: 'Mensalidade Escolar / Cursos', code: '6', val: 450.00 },
+    { desc: 'Restaurante em Família', code: '7', val: 120.00 },
+    { desc: 'Pizzaria / Lanche Fim de Semana', code: '7', val: 95.00 },
+    { desc: 'Roupas e Calçados', code: '8', val: 180.00 },
+    { desc: 'Assinatura Streaming (Netflix/Spotify)', code: '9', val: 55.90 }
   ];
 
   function handleAutocompleteInput(e) {
@@ -525,12 +574,16 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    box.innerHTML = matches.map(m => `
-      <div class="suggestion-item" data-desc="${m.desc}" data-code="${m.code}" data-val="${m.val || ''}">
-        <span><strong>${m.desc}</strong> (${m.code})</span>
-        <span style="color: #16a34a; font-weight: 600;">${m.val ? formatMoney(m.val) : ''}</span>
-      </div>
-    `).join('');
+    box.innerHTML = matches.map(m => {
+      const catObj = state.categories.find(c => String(c.code) === String(m.code));
+      const catLabel = catObj ? `[${m.code}] ${catObj.name.split(' ')[0]}` : `[${m.code}]`;
+      return `
+        <div class="suggestion-item" data-desc="${m.desc}" data-code="${m.code}" data-val="${m.val || ''}">
+          <span><strong>${m.desc}</strong> <small style="color: #64748b;">${catLabel}</small></span>
+          <span style="color: #16a34a; font-weight: 600;">${m.val ? formatMoney(m.val) : ''}</span>
+        </div>
+      `;
+    }).join('');
 
     box.style.display = 'block';
 
@@ -547,13 +600,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Adição Ultra-Rápida estilo Excel (Enter para salvar e ir para o próximo)
+  // LANÇAMENTO DE DESPESA COM DETECÇÃO AUTOMÁTICA DE MÊS!
   const submitExpense = async () => {
     const desc = capitalizeFirstLetter(elements.inputExpDesc.value.trim());
     const val = parseFloat(elements.inputExpVal.value) || 0;
     const date = elements.inputExpDate.value;
     const code = elements.inputExpCode.value;
 
+    if (!date) {
+      alert('Por favor, informe a data da despesa.');
+      elements.inputExpDate.focus();
+      return;
+    }
     if (!desc) {
       alert('Por favor, informe a descrição da despesa.');
       elements.inputExpDesc.focus();
@@ -565,18 +623,49 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const newExpense = await window.db.saveExpense({
-      expense_date: date,
-      month_ref: state.currentMonthRef,
-      category_code: code,
-      description: desc,
-      amount: val
-    });
+    // DETECÇÃO AUTOMÁTICA: O usuário digitou uma data de outro mês?
+    const targetMonthRef = date.substring(0, 7); // ex: '2026-03'
+    const isDifferentMonth = targetMonthRef !== state.currentMonthRef;
 
-    state.expenses.push(newExpense);
-    calculateAndRender();
+    if (isDifferentMonth) {
+      // 1. Garante que a aba do mês digitado exista
+      ensureMonthExists(targetMonthRef);
 
-    // Reset limpo e foco imediato para continuar digitando sem usar o mouse!
+      // 2. Salva a despesa vinculada ao mês real da data
+      await window.db.saveExpense({
+        expense_date: date,
+        month_ref: targetMonthRef,
+        category_code: code,
+        description: desc,
+        amount: val
+      });
+
+      // 3. Muda a aba automaticamente para o mês correto
+      state.currentMonthRef = targetMonthRef;
+      renderMonthTabs();
+      updateSheetSubtitle();
+      state.expenses = await window.db.getExpenses(state.currentMonthRef);
+      calculateAndRender();
+
+      // 4. Notifica o usuário com destaque elegante
+      const [y, m] = targetMonthRef.split('-').map(Number);
+      showToast(`🎯 Data identificada como ${MONTH_NAMES[m - 1]}/${String(y).slice(-2)}! Movido automaticamente para a aba correta.`);
+    } else {
+      // Data coincide com o mês atual da aba
+      const newExpense = await window.db.saveExpense({
+        expense_date: date,
+        month_ref: state.currentMonthRef,
+        category_code: code,
+        description: desc,
+        amount: val
+      });
+
+      state.expenses.push(newExpense);
+      calculateAndRender();
+      showToast(`✅ Despesa salva com sucesso em ${state.months.find(m => m.ref === state.currentMonthRef)?.label}!`);
+    }
+
+    // Reset limpo e foco imediato para continuar digitando no estilo Excel
     elements.inputExpDesc.value = '';
     elements.inputExpVal.value = '';
     elements.inputExpDesc.focus();
@@ -588,7 +677,6 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.btnNavRecurring.addEventListener('click', () => switchView('recurring'));
     elements.btnNavIncomes.addEventListener('click', () => switchView('incomes'));
 
-    // Tecla Enter no valor ou descrição para lançamento instantâneo
     elements.btnAddExpense.addEventListener('click', submitExpense);
     elements.inputExpVal.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -603,7 +691,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Auto-capitalização em tempo real nos inputs de criação
     elements.inputExpDesc.addEventListener('input', handleAutocompleteInput);
     elements.inputRecDesc.addEventListener('input', (e) => {
       e.target.value = capitalizeFirstLetter(e.target.value);
@@ -636,6 +723,7 @@ document.addEventListener('DOMContentLoaded', () => {
       elements.inputRecDesc.value = '';
       elements.inputRecVal.value = '';
       elements.inputRecDesc.focus();
+      showToast(`✅ Despesa fixa adicionada!`);
     };
 
     elements.btnAddRecurring.addEventListener('click', submitRecurring);
@@ -660,6 +748,7 @@ document.addEventListener('DOMContentLoaded', () => {
       elements.inputIncName.value = '';
       elements.inputIncVal.value = '';
       elements.inputIncName.focus();
+      showToast(`✅ Renda familiar adicionada!`);
     };
 
     elements.btnAddIncome.addEventListener('click', submitIncome);
@@ -704,7 +793,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateSupabaseStatusBadge();
       elements.configModal.classList.remove('open');
       await loadAllData();
-      alert('Configurações salvas e conectadas ao Supabase!');
+      showToast('Configurações salvas e conectadas ao Supabase!');
     });
 
     elements.btnClearConfig.addEventListener('click', async () => {
@@ -712,7 +801,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateSupabaseStatusBadge();
       elements.configModal.classList.remove('open');
       await loadAllData();
-      alert('Modo Local ativado.');
+      showToast('Modo Local (Offline) ativado.');
     });
   }
 
