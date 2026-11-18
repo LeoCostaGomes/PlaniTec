@@ -1,23 +1,42 @@
 /**
  * PlaniTec - Lógica da Aplicação (App Controller)
+ * Experiência Ultra-Prática inspirada no Microsoft Excel
  * Equipe: Leonardo, João Gabriel e Família
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  const MONTH_NAMES = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  // Identifica o Mês Atual do Calendário Real
+  const today = new Date();
+  const realCurrentYear = today.getFullYear();
+  const realCurrentMonth = today.getMonth() + 1; // 1 a 12
+  const realCurrentMonthRef = `${realCurrentYear}-${String(realCurrentMonth).padStart(2, '0')}`;
+
+  // Gera a lista inicial de abas de meses com base no calendário real
+  function generateInitialMonths() {
+    const months = [];
+    // Gera do mês 1 ao 12 do ano atual
+    for (let m = 1; m <= 12; m++) {
+      const ref = `${realCurrentYear}-${String(m).padStart(2, '0')}`;
+      const label = `${MONTH_NAMES[m - 1]}/${String(realCurrentYear).slice(-2)}`;
+      months.push({
+        ref,
+        label,
+        isCurrent: ref === realCurrentMonthRef
+      });
+    }
+    return months;
+  }
+
   // Estado da Aplicação
   const state = {
     currentView: 'expenses', // 'expenses' | 'recurring' | 'incomes'
-    currentMonthRef: '2026-06', // Mês padrão Junho/2026 como no mockup
-    months: [
-      { ref: '2026-01', label: 'Janeiro/26' },
-      { ref: '2026-02', label: 'Fevereiro/26' },
-      { ref: '2026-03', label: 'Março/26' },
-      { ref: '2026-04', label: 'Abril/26' },
-      { ref: '2026-05', label: 'Maio/26' },
-      { ref: '2026-06', label: 'Junho/26', isCurrent: true },
-      { ref: '2026-07', label: 'Julho/26' },
-      { ref: '2026-08', label: 'Agosto/26' }
-    ],
+    currentMonthRef: realCurrentMonthRef, // Inicializa exatamente no mês atual do calendário!
+    months: generateInitialMonths(),
     incomes: [],
     recurringExpenses: [],
     expenses: [],
@@ -51,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tabelas
     tableExpenses: document.getElementById('table-expenses'),
     tbodyExpenses: document.getElementById('tbody-expenses'),
+    tfootExpensesTotal: document.getElementById('expenses-total-cell'),
     tableRecurring: document.getElementById('table-recurring'),
     tbodyRecurring: document.getElementById('tbody-recurring'),
     tableIncomes: document.getElementById('table-incomes'),
@@ -96,46 +116,55 @@ document.addEventListener('DOMContentLoaded', () => {
     cfgSupabaseKey: document.getElementById('cfg-supabase-key')
   };
 
+  // Helper para Primeira Letra Maiúscula Automática
+  function capitalizeFirstLetter(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
   // Formatador de Moeda BRL
   const formatMoney = (val) => {
     const num = parseFloat(val) || 0;
     return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  // Inicialização
+  // Inicialização Geral
   async function initApp() {
     state.categories = window.db.getCategories();
     populateCategorySelects();
     updateSupabaseStatusBadge();
     setupEventListeners();
     renderMonthTabs();
-    setDefaultExpenseDate();
+    syncExpenseDateWithMonth(state.currentMonthRef);
 
     await loadAllData();
     switchView('expenses');
   }
 
-  // Preenche dropdowns de categoria
+  // Preenche opções de categorias
   function populateCategorySelects() {
     const optionsHtml = state.categories.map(c => `<option value="${c.code}">${c.code} - ${c.name}</option>`).join('');
     elements.inputExpCode.innerHTML = optionsHtml;
     elements.inputRecCode.innerHTML = optionsHtml;
 
-    // Filtro de categorias
     elements.filterCategory.innerHTML = '<option value="">Todas as categorias</option>' + 
       state.categories.map(c => `<option value="${c.code}">${c.code} - ${c.name}</option>`).join('');
   }
 
-  // Data padrão no input de despesa (hoje ou dia do mês selecionado)
-  function setDefaultExpenseDate() {
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    elements.inputExpDate.value = `${yyyy}-${mm}-${dd}`;
+  // Mantém a data de lançamento coincidente com o mês selecionado
+  function syncExpenseDateWithMonth(monthRef) {
+    const [year, month] = monthRef.split('-');
+    const now = new Date();
+    let day = String(now.getDate()).padStart(2, '0');
+
+    // Se o mês selecionado não for o mês corrente, define para o dia 01
+    if (monthRef !== realCurrentMonthRef) {
+      day = '01';
+    }
+    elements.inputExpDate.value = `${year}-${month}-${day}`;
   }
 
-  // Carrega todos os dados do banco (Supabase ou Local)
+  // Carrega todos os dados do banco
   async function loadAllData() {
     state.incomes = await window.db.getIncomes();
     state.recurringExpenses = await window.db.getRecurringExpenses();
@@ -143,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
     calculateAndRender();
   }
 
-  // Renderiza abas no rodapé estilo Excel
+  // Renderiza Abas de Meses Estilo Excel
   function renderMonthTabs() {
     elements.excelTabsBar.innerHTML = '';
     state.months.forEach(m => {
@@ -155,6 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       tab.addEventListener('click', async () => {
         state.currentMonthRef = m.ref;
+        syncExpenseDateWithMonth(m.ref);
         renderMonthTabs();
         updateSheetSubtitle();
         state.expenses = await window.db.getExpenses(state.currentMonthRef);
@@ -163,16 +193,30 @@ document.addEventListener('DOMContentLoaded', () => {
       elements.excelTabsBar.appendChild(tab);
     });
 
-    // Botão de adicionar novo mês
+    // Botão Adicionar Mês (Correção do bug de 'Mês 9/26')
     const addTabBtn = document.createElement('button');
     addTabBtn.className = 'btn-add-tab';
-    addTabBtn.title = 'Adicionar novo mês de planejamento';
-    addTabBtn.innerHTML = '+ Adicionar Mês';
+    addTabBtn.title = 'Adicionar próximo mês sequencial no calendário';
+    addTabBtn.innerHTML = '➕ Novo Mês';
     addTabBtn.addEventListener('click', () => {
-      const nextMonthNum = state.months.length + 1;
-      const ref = `2026-${String(nextMonthNum).padStart(2, '0')}`;
-      const label = `Mês ${nextMonthNum}/26`;
-      state.months.push({ ref, label });
+      const lastMonth = state.months[state.months.length - 1];
+      let [y, m] = lastMonth.ref.split('-').map(Number);
+      
+      m += 1;
+      if (m > 12) {
+        m = 1;
+        y += 1;
+      }
+
+      const ref = `${y}-${String(m).padStart(2, '0')}`;
+      const label = `${MONTH_NAMES[m - 1]}/${String(y).slice(-2)}`;
+      
+      state.months.push({
+        ref,
+        label,
+        isCurrent: ref === realCurrentMonthRef
+      });
+
       renderMonthTabs();
     });
     elements.excelTabsBar.appendChild(addTabBtn);
@@ -180,24 +224,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateSheetSubtitle() {
     const currentMonth = state.months.find(m => m.ref === state.currentMonthRef);
-    elements.sheetSubtitle.textContent = `Mês de referência: ${currentMonth ? currentMonth.label : state.currentMonthRef}`;
+    elements.sheetSubtitle.textContent = `Mês selecionado: ${currentMonth ? currentMonth.label : state.currentMonthRef}`;
   }
 
-  // Alterna entre as telas conforme o rascunho
+  // Alterna as Telas
   function switchView(viewName) {
     state.currentView = viewName;
 
-    // Oculta todas as tabelas
     elements.tableExpenses.style.display = 'none';
     elements.tableRecurring.style.display = 'none';
     elements.tableIncomes.style.display = 'none';
 
-    // Oculta/exibe botões da sidebar de acordo com a tela atual
     elements.btnNavExpenses.style.display = viewName === 'expenses' ? 'none' : 'flex';
     elements.btnNavRecurring.style.display = viewName === 'recurring' ? 'none' : 'flex';
     elements.btnNavIncomes.style.display = viewName === 'incomes' ? 'none' : 'flex';
 
-    // Filtros e abas só aparecem na tela de despesas do mês
     elements.expenseFilters.style.display = viewName === 'expenses' ? 'flex' : 'none';
     elements.excelTabsBar.style.display = viewName === 'expenses' ? 'flex' : 'none';
 
@@ -208,31 +249,24 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (viewName === 'recurring') {
       elements.tableRecurring.style.display = 'table';
       elements.sheetTitle.textContent = 'Despesas Mensais Recorrentes (Fixas)';
-      elements.sheetSubtitle.textContent = 'Valores descontados automaticamente do saldo a cada mês';
+      elements.sheetSubtitle.textContent = 'Custos fixos subtraídos automaticamente todo mês';
     } else if (viewName === 'incomes') {
       elements.tableIncomes.style.display = 'table';
       elements.sheetTitle.textContent = 'Rendas Mensais da Família';
-      elements.sheetSubtitle.textContent = 'Salários e rendimentos somados ao saldo da casa';
+      elements.sheetSubtitle.textContent = 'Salários e rendimentos somados ao saldo da família';
     }
 
     calculateAndRender();
   }
 
-  // Cálculos financeiros e atualização de tabelas
+  // Cálculos Financeiros
   function calculateAndRender() {
-    // 1. Total Rendas
     const totalIncome = state.incomes.reduce((acc, cur) => acc + (parseFloat(cur.amount) || 0), 0);
-
-    // 2. Total Despesas Fixas Recorrentes
     const totalRecurring = state.recurringExpenses.reduce((acc, cur) => acc + (parseFloat(cur.amount) || 0), 0);
-
-    // 3. Total Lançamentos do Mês
     const totalExpenses = state.expenses.reduce((acc, cur) => acc + (parseFloat(cur.amount) || 0), 0);
-
-    // 4. Saldo Disponível
     const availableBalance = totalIncome - totalRecurring - totalExpenses;
 
-    // Atualiza Topbar KPI
+    // Atualiza Topbar
     if (state.currentView === 'recurring') {
       elements.kpiSaldoTopbar.textContent = formatMoney(totalRecurring);
       document.querySelector('.kpi-saldo-label').textContent = 'Total Despesas Fixas';
@@ -242,33 +276,26 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       elements.kpiSaldoTopbar.textContent = formatMoney(availableBalance);
       document.querySelector('.kpi-saldo-label').textContent = 'Saldo Disponível no Mês';
-      
-      if (availableBalance < 0) {
-        elements.kpiSaldoTopbar.style.color = '#fecaca';
-      } else {
-        elements.kpiSaldoTopbar.style.color = '#ffffff';
-      }
+      elements.kpiSaldoTopbar.style.color = availableBalance < 0 ? '#fecaca' : '#ffffff';
     }
 
-    // Atualiza Sidebar Card
+    // Atualiza Sidebar
     elements.sidebarTotalIncome.textContent = formatMoney(totalIncome);
     elements.sidebarTotalRecurring.textContent = formatMoney(totalRecurring);
     elements.sidebarTotalExpenses.textContent = formatMoney(totalExpenses);
     elements.sidebarBalance.textContent = formatMoney(availableBalance);
     elements.sidebarBalance.style.color = availableBalance < 0 ? '#ef4444' : '#16a34a';
 
-    // Renderiza Tabelas
     renderExpensesTable();
     renderRecurringTable();
     renderIncomesTable();
   }
 
-  // --- RENDER TABELA DESPESAS COM FILTRO ---
+  // Render Tabela de Despesas
   function renderExpensesTable() {
     const tbody = elements.tbodyExpenses;
     tbody.innerHTML = '';
 
-    // Aplica filtros
     let filtered = state.expenses.filter(e => {
       const matchSearch = !state.filters.search || e.description.toLowerCase().includes(state.filters.search.toLowerCase());
       const matchCat = !state.filters.category || e.category_code === state.filters.category;
@@ -278,45 +305,63 @@ document.addEventListener('DOMContentLoaded', () => {
       return matchSearch && matchCat && matchMin && matchMax;
     });
 
+    // Atualiza o Total no rodapé da tabela estilo Excel
+    const sumTotal = filtered.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
+    if (elements.tfootExpensesTotal) {
+      elements.tfootExpensesTotal.textContent = formatMoney(sumTotal);
+    }
+
     if (filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 24px;">Nenhuma despesa lançada neste mês com os filtros atuais. Use a linha abaixo para lançar!</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">Nenhuma despesa para este mês. Lance na linha abaixo e pressione Enter!</td></tr>`;
       return;
     }
 
-    filtered.forEach(item => {
+    filtered.forEach((item, index) => {
       const tr = document.createElement('tr');
+      tr.className = 'excel-row';
       tr.innerHTML = `
+        <td class="excel-row-idx">${index + 1}</td>
         <td><input type="date" class="excel-cell-input" value="${item.expense_date}" data-id="${item.id}" data-field="expense_date"></td>
         <td>
           <select class="excel-cell-input" data-id="${item.id}" data-field="category_code">
-            ${state.categories.map(c => `<option value="${c.code}" ${c.code === item.category_code ? 'selected' : ''}>${c.code}</option>`).join('')}
+            ${state.categories.map(c => `<option value="${c.code}" ${c.code === item.category_code ? 'selected' : ''}>${c.code} - ${c.name}</option>`).join('')}
           </select>
         </td>
-        <td><input type="text" class="excel-cell-input" value="${item.description}" data-id="${item.id}" data-field="description"></td>
+        <td><input type="text" class="excel-cell-input desc-cell" value="${item.description}" data-id="${item.id}" data-field="description"></td>
         <td style="text-align: right;"><input type="number" step="0.01" class="excel-cell-input" style="text-align: right;" value="${parseFloat(item.amount).toFixed(2)}" data-id="${item.id}" data-field="amount"></td>
         <td style="text-align: center;">
-          <button class="btn-delete-row" data-id="${item.id}" title="Excluir Lançamento">&times;</button>
+          <button class="btn-delete-row" data-id="${item.id}" title="Excluir Lançamento (Del)">&times;</button>
         </td>
       `;
 
-      // Eventos inline edit estilo Excel
+      // Auto-capitalização e edição em tempo real nas células
+      const descInput = tr.querySelector('.desc-cell');
+      descInput.addEventListener('input', (e) => {
+        e.target.value = capitalizeFirstLetter(e.target.value);
+      });
+
       tr.querySelectorAll('.excel-cell-input').forEach(input => {
         input.addEventListener('change', async (ev) => {
           const id = ev.target.dataset.id;
           const field = ev.target.dataset.field;
-          const val = ev.target.value;
+          let val = ev.target.value;
+          if (field === 'description') val = capitalizeFirstLetter(val);
+
           const targetItem = state.expenses.find(i => i.id === id);
           if (targetItem) {
             targetItem[field] = field === 'amount' ? parseFloat(val) || 0 : val;
+            // Se mudou a data, sincroniza month_ref
+            if (field === 'expense_date' && val) {
+              targetItem.month_ref = val.substring(0, 7);
+            }
             await window.db.saveExpense(targetItem);
             calculateAndRender();
           }
         });
       });
 
-      // Botão de deletar
       tr.querySelector('.btn-delete-row').addEventListener('click', async () => {
-        if (confirm('Deseja excluir este lançamento de despesa?')) {
+        if (confirm('Deseja excluir esta linha de despesa?')) {
           await window.db.deleteExpense(item.id);
           state.expenses = state.expenses.filter(i => i.id !== item.id);
           calculateAndRender();
@@ -327,36 +372,44 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- RENDER TABELA RECORRENTES ---
+  // Render Tabela Recorrentes
   function renderRecurringTable() {
     const tbody = elements.tbodyRecurring;
     tbody.innerHTML = '';
 
     if (state.recurringExpenses.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8; padding: 24px;">Nenhuma despesa fixa cadastrada.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 20px;">Nenhuma despesa fixa cadastrada.</td></tr>`;
       return;
     }
 
-    state.recurringExpenses.forEach(item => {
+    state.recurringExpenses.forEach((item, index) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
+        <td class="excel-row-idx">${index + 1}</td>
         <td>
           <select class="excel-cell-input" data-id="${item.id}" data-field="code">
-            ${state.categories.map(c => `<option value="${c.code}" ${c.code === item.code ? 'selected' : ''}>${c.code}</option>`).join('')}
+            ${state.categories.map(c => `<option value="${c.code}" ${c.code === item.code ? 'selected' : ''}>${c.code} - ${c.name}</option>`).join('')}
           </select>
         </td>
-        <td><input type="text" class="excel-cell-input" value="${item.description}" data-id="${item.id}" data-field="description"></td>
+        <td><input type="text" class="excel-cell-input desc-cell" value="${item.description}" data-id="${item.id}" data-field="description"></td>
         <td style="text-align: right;"><input type="number" step="0.01" class="excel-cell-input" style="text-align: right;" value="${parseFloat(item.amount).toFixed(2)}" data-id="${item.id}" data-field="amount"></td>
         <td style="text-align: center;">
           <button class="btn-delete-row" data-id="${item.id}" title="Excluir Despesa Fixa">&times;</button>
         </td>
       `;
 
+      const descInput = tr.querySelector('.desc-cell');
+      descInput.addEventListener('input', (e) => {
+        e.target.value = capitalizeFirstLetter(e.target.value);
+      });
+
       tr.querySelectorAll('.excel-cell-input').forEach(input => {
         input.addEventListener('change', async (ev) => {
           const id = ev.target.dataset.id;
           const field = ev.target.dataset.field;
-          const val = ev.target.value;
+          let val = ev.target.value;
+          if (field === 'description') val = capitalizeFirstLetter(val);
+
           const target = state.recurringExpenses.find(i => i.id === id);
           if (target) {
             target[field] = field === 'amount' ? parseFloat(val) || 0 : val;
@@ -367,7 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       tr.querySelector('.btn-delete-row').addEventListener('click', async () => {
-        if (confirm('Deseja excluir esta despesa mensal recorrente?')) {
+        if (confirm('Deseja excluir esta despesa fixa?')) {
           await window.db.deleteRecurringExpense(item.id);
           state.recurringExpenses = state.recurringExpenses.filter(i => i.id !== item.id);
           calculateAndRender();
@@ -378,31 +431,39 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- RENDER TABELA RENDAS ---
+  // Render Tabela Rendas
   function renderIncomesTable() {
     const tbody = elements.tbodyIncomes;
     tbody.innerHTML = '';
 
     if (state.incomes.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #94a3b8; padding: 24px;">Nenhuma renda familiar cadastrada.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8; padding: 20px;">Nenhuma renda familiar cadastrada.</td></tr>`;
       return;
     }
 
-    state.incomes.forEach(item => {
+    state.incomes.forEach((item, index) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><input type="text" class="excel-cell-input" value="${item.member_name}" data-id="${item.id}" data-field="member_name"></td>
+        <td class="excel-row-idx">${index + 1}</td>
+        <td><input type="text" class="excel-cell-input name-cell" value="${item.member_name}" data-id="${item.id}" data-field="member_name"></td>
         <td style="text-align: right;"><input type="number" step="0.01" class="excel-cell-input" style="text-align: right;" value="${parseFloat(item.amount).toFixed(2)}" data-id="${item.id}" data-field="amount"></td>
         <td style="text-align: center;">
           <button class="btn-delete-row" data-id="${item.id}" title="Excluir Renda">&times;</button>
         </td>
       `;
 
+      const nameInput = tr.querySelector('.name-cell');
+      nameInput.addEventListener('input', (e) => {
+        e.target.value = capitalizeFirstLetter(e.target.value);
+      });
+
       tr.querySelectorAll('.excel-cell-input').forEach(input => {
         input.addEventListener('change', async (ev) => {
           const id = ev.target.dataset.id;
           const field = ev.target.dataset.field;
-          const val = ev.target.value;
+          let val = ev.target.value;
+          if (field === 'member_name') val = capitalizeFirstLetter(val);
+
           const target = state.incomes.find(i => i.id === id);
           if (target) {
             target[field] = field === 'amount' ? parseFloat(val) || 0 : val;
@@ -424,22 +485,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- SUGESTÃO AUTOMÁTICA INTELIGENTE (AUTOCOMPLETE) ---
+  // Autocomplete Inteligente
   const suggestionsDatabase = [
     { desc: 'Supermercado Mensal', code: 'ALIM', val: 650.00 },
     { desc: 'Padaria e Café', code: 'ALIM', val: 28.50 },
-    { desc: 'Farmácia e Remédios', code: 'SAUD', val: 85.00 },
-    { desc: 'Gasolina / Posto de Combustível', code: 'TRAN', val: 150.00 },
-    { desc: 'Aplicativo de Transporte (Uber/99)', code: 'TRAN', val: 32.00 },
-    { desc: 'Restaurante / Almoço Família', code: 'LAZE', val: 120.00 },
-    { desc: 'Pizzaria Fim de Semana', code: 'LAZE', val: 95.00 },
-    { desc: 'Material Escolar e Livros', code: 'EDUC', val: 110.00 },
-    { desc: 'Manutenção da Casa / Ferramentas', code: 'MORA', val: 140.00 },
-    { desc: 'Conta de Energia (Enel/Cemig)', code: 'UTIL', val: 220.00 },
-    { desc: 'Conta de Água e Saneamento', code: 'UTIL', val: 95.00 }
+    { desc: 'Farmácia e Medicamentos', code: 'SAUD', val: 85.00 },
+    { desc: 'Gasolina / Combustível', code: 'TRAN', val: 150.00 },
+    { desc: 'Uber / Aplicativo de Transporte', code: 'TRAN', val: 32.00 },
+    { desc: 'Restaurante em Família', code: 'LAZE', val: 120.00 },
+    { desc: 'Pizzaria / Delivery', code: 'LAZE', val: 95.00 },
+    { desc: 'Manutenção Doméstica', code: 'MORA', val: 140.00 },
+    { desc: 'Energia Elétrica', code: 'UTIL', val: 220.00 },
+    { desc: 'Conta de Água', code: 'UTIL', val: 95.00 }
   ];
 
   function handleAutocompleteInput(e) {
+    const rawText = e.target.value;
+    e.target.value = capitalizeFirstLetter(rawText);
+
     const text = e.target.value.toLowerCase().trim();
     const box = elements.suggestionBox;
 
@@ -448,7 +511,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Busca sugestões combinando a lista padrão e despesas anteriores já lançadas
     const historySuggestions = state.expenses.map(exp => ({
       desc: exp.description,
       code: exp.category_code,
@@ -466,7 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
     box.innerHTML = matches.map(m => `
       <div class="suggestion-item" data-desc="${m.desc}" data-code="${m.code}" data-val="${m.val || ''}">
         <span><strong>${m.desc}</strong> (${m.code})</span>
-        <span style="color: #16a34a;">${m.val ? formatMoney(m.val) : ''}</span>
+        <span style="color: #16a34a; font-weight: 600;">${m.val ? formatMoney(m.val) : ''}</span>
       </div>
     `).join('');
 
@@ -474,7 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     box.querySelectorAll('.suggestion-item').forEach(item => {
       item.addEventListener('click', () => {
-        elements.inputExpDesc.value = item.dataset.desc;
+        elements.inputExpDesc.value = capitalizeFirstLetter(item.dataset.desc);
         elements.inputExpCode.value = item.dataset.code;
         if (item.dataset.val && (!elements.inputExpVal.value || elements.inputExpVal.value === '0')) {
           elements.inputExpVal.value = item.dataset.val;
@@ -485,79 +547,89 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- EVENT LISTENERS ---
+  // Adição Ultra-Rápida estilo Excel (Enter para salvar e ir para o próximo)
+  const submitExpense = async () => {
+    const desc = capitalizeFirstLetter(elements.inputExpDesc.value.trim());
+    const val = parseFloat(elements.inputExpVal.value) || 0;
+    const date = elements.inputExpDate.value;
+    const code = elements.inputExpCode.value;
+
+    if (!desc) {
+      alert('Por favor, informe a descrição da despesa.');
+      elements.inputExpDesc.focus();
+      return;
+    }
+    if (val <= 0) {
+      alert('O valor da despesa deve ser maior que zero.');
+      elements.inputExpVal.focus();
+      return;
+    }
+
+    const newExpense = await window.db.saveExpense({
+      expense_date: date,
+      month_ref: state.currentMonthRef,
+      category_code: code,
+      description: desc,
+      amount: val
+    });
+
+    state.expenses.push(newExpense);
+    calculateAndRender();
+
+    // Reset limpo e foco imediato para continuar digitando sem usar o mouse!
+    elements.inputExpDesc.value = '';
+    elements.inputExpVal.value = '';
+    elements.inputExpDesc.focus();
+  };
+
+  // Setup de Eventos
   function setupEventListeners() {
-    // Navegação Sidebar
     elements.btnNavExpenses.addEventListener('click', () => switchView('expenses'));
     elements.btnNavRecurring.addEventListener('click', () => switchView('recurring'));
     elements.btnNavIncomes.addEventListener('click', () => switchView('incomes'));
 
-    // Adicionar Despesa
-    const submitExpense = async () => {
-      const desc = elements.inputExpDesc.value.trim();
-      const val = parseFloat(elements.inputExpVal.value) || 0;
-      const date = elements.inputExpDate.value;
-      const code = elements.inputExpCode.value;
-
-      if (!desc) {
-        alert('Por favor, informe a descrição da despesa.');
-        elements.inputExpDesc.focus();
-        return;
-      }
-      if (val <= 0) {
-        alert('O valor da despesa deve ser maior que zero.');
-        elements.inputExpVal.focus();
-        return;
-      }
-
-      const newExpense = await window.db.saveExpense({
-        expense_date: date,
-        month_ref: state.currentMonthRef,
-        category_code: code,
-        description: desc,
-        amount: val
-      });
-
-      state.expenses.push(newExpense);
-      calculateAndRender();
-
-      // Limpa para a próxima digitação rápida estilo Excel
-      elements.inputExpDesc.value = '';
-      elements.inputExpVal.value = '';
-      elements.inputExpDesc.focus();
-    };
-
+    // Tecla Enter no valor ou descrição para lançamento instantâneo
     elements.btnAddExpense.addEventListener('click', submitExpense);
     elements.inputExpVal.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') submitExpense();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitExpense();
+      }
+    });
+    elements.inputExpDesc.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && elements.inputExpVal.value) {
+        e.preventDefault();
+        submitExpense();
+      }
     });
 
-    // Autocomplete na descrição
+    // Auto-capitalização em tempo real nos inputs de criação
     elements.inputExpDesc.addEventListener('input', handleAutocompleteInput);
+    elements.inputRecDesc.addEventListener('input', (e) => {
+      e.target.value = capitalizeFirstLetter(e.target.value);
+    });
+    elements.inputIncName.addEventListener('input', (e) => {
+      e.target.value = capitalizeFirstLetter(e.target.value);
+    });
+
     document.addEventListener('click', (e) => {
       if (!elements.suggestionBox.contains(e.target) && e.target !== elements.inputExpDesc) {
         elements.suggestionBox.style.display = 'none';
       }
     });
 
-    // Adicionar Despesa Recorrente
+    // Recorrentes
     const submitRecurring = async () => {
-      const desc = elements.inputRecDesc.value.trim();
+      const desc = capitalizeFirstLetter(elements.inputRecDesc.value.trim());
       const val = parseFloat(elements.inputRecVal.value) || 0;
       const code = elements.inputRecCode.value;
 
-      if (!desc) {
-        alert('Informe a descrição da despesa mensal fixa.');
-        elements.inputRecDesc.focus();
+      if (!desc || val <= 0) {
+        alert('Informe a descrição e um valor maior que zero.');
         return;
       }
 
-      const item = await window.db.saveRecurringExpense({
-        code,
-        description: desc,
-        amount: val
-      });
-
+      const item = await window.db.saveRecurringExpense({ code, description: desc, amount: val });
       state.recurringExpenses.push(item);
       calculateAndRender();
 
@@ -571,22 +643,17 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.key === 'Enter') submitRecurring();
     });
 
-    // Adicionar Renda
+    // Rendas
     const submitIncome = async () => {
-      const name = elements.inputIncName.value.trim();
+      const name = capitalizeFirstLetter(elements.inputIncName.value.trim());
       const val = parseFloat(elements.inputIncVal.value) || 0;
 
-      if (!name) {
-        alert('Informe o nome do integrante ou descrição da renda.');
-        elements.inputIncName.focus();
+      if (!name || val <= 0) {
+        alert('Informe o nome do integrante e um valor maior que zero.');
         return;
       }
 
-      const item = await window.db.saveIncome({
-        member_name: name,
-        amount: val
-      });
-
+      const item = await window.db.saveIncome({ member_name: name, amount: val });
       state.incomes.push(item);
       calculateAndRender();
 
@@ -605,17 +672,14 @@ document.addEventListener('DOMContentLoaded', () => {
       state.filters.search = e.target.value;
       renderExpensesTable();
     });
-
     elements.filterCategory.addEventListener('change', (e) => {
       state.filters.category = e.target.value;
       renderExpensesTable();
     });
-
     elements.filterMinVal.addEventListener('input', (e) => {
       state.filters.minVal = e.target.value ? parseFloat(e.target.value) : null;
       renderExpensesTable();
     });
-
     elements.filterMaxVal.addEventListener('input', (e) => {
       state.filters.maxVal = e.target.value ? parseFloat(e.target.value) : null;
       renderExpensesTable();
@@ -640,7 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateSupabaseStatusBadge();
       elements.configModal.classList.remove('open');
       await loadAllData();
-      alert('Configurações salvas! Carregando dados do Supabase.');
+      alert('Configurações salvas e conectadas ao Supabase!');
     });
 
     elements.btnClearConfig.addEventListener('click', async () => {
@@ -648,7 +712,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateSupabaseStatusBadge();
       elements.configModal.classList.remove('open');
       await loadAllData();
-      alert('Alternado para armazenamento Local (Offline).');
+      alert('Modo Local ativado.');
     });
   }
 
@@ -663,6 +727,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Iniciar aplicação
   initApp();
 });
