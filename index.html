@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlaniTec - Gestão Financeira Familiar Inteligente</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="brand-section">
+      <div class="logo-text">
+        <span>📊 PlaniTec</span>
+        <span class="logo-tag">Família</span>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="kpi-saldo-box" id="topbar-saldo-box">
+        <div class="kpi-saldo-label">Saldo Disponível no Mês</div>
+        <div class="kpi-saldo-value" id="kpi-saldo-topbar">R$ 0,00</div>
+      </div>
+
+      <button class="btn-config" id="btn-open-config" title="Configurar Supabase">
+        <span id="supabase-status-indicator">●</span>
+        <span id="supabase-status-text">Banco</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="main-container">
+    
+    <!-- ÁREA PRINCIPAL DA PLANILHA (SHEET WORKSPACE) -->
+    <section class="sheet-workspace">
+      
+      <!-- HEADER DO SHEET ATUAL -->
+      <div class="sheet-header">
+        <div class="sheet-title-group">
+          <h2 id="sheet-title">Lançamento de Despesas</h2>
+          <p id="sheet-subtitle">Mês de referência: Junho de 2026</p>
+        </div>
+
+        <!-- FILTROS (Exibidos na tela de despesas do mês) -->
+        <div class="filter-bar" id="expense-filters">
+          <input type="text" id="filter-search" class="filter-input" placeholder="🔍 Filtrar descrição...">
+          <select id="filter-category" class="filter-select">
+            <option value="">Todas as categorias</option>
+          </select>
+          <input type="number" id="filter-min-val" class="filter-input" placeholder="Min R$" style="width: 85px;">
+          <input type="number" id="filter-max-val" class="filter-input" placeholder="Max R$" style="width: 85px;">
+        </div>
+      </div>
+
+      <!-- TABELA ESTILO EXCEL -->
+      <div class="table-container">
+        
+        <!-- 1. VIEW: LANÇAMENTO DE DESPESAS (Planilha Mensal) -->
+        <table class="excel-table" id="table-expenses">
+          <thead>
+            <tr>
+              <th style="width: 130px;">Data</th>
+              <th style="width: 110px;">Código</th>
+              <th>Descrição</th>
+              <th style="width: 140px; text-align: right;">Valor (R$)</th>
+              <th style="width: 70px; text-align: center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-expenses">
+            <!-- Linhas geradas dinamicamente -->
+          </tbody>
+          <!-- Linha de inserção rápida estilo Excel -->
+          <tfoot>
+            <tr class="quick-add-row">
+              <td>
+                <input type="date" id="input-exp-date" class="excel-cell-input">
+              </td>
+              <td>
+                <select id="input-exp-code" class="excel-cell-input">
+                  <!-- Categorias -->
+                </select>
+              </td>
+              <td>
+                <div class="autocomplete-wrapper">
+                  <input type="text" id="input-exp-desc" class="excel-cell-input" placeholder="Digite a descrição (sugestão inteligente)..." autocomplete="off">
+                  <div class="suggestion-box" id="suggestion-box"></div>
+                </div>
+              </td>
+              <td>
+                <input type="number" step="0.01" id="input-exp-val" class="excel-cell-input" placeholder="0,00" style="text-align: right;">
+              </td>
+              <td style="text-align: center;">
+                <button type="button" class="btn-add-row" id="btn-add-expense" title="Adicionar Linha">+</button>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- 2. VIEW: DESPESAS MENSAIS RECORRENTES (Fixas) -->
+        <table class="excel-table" id="table-recurring" style="display: none;">
+          <thead>
+            <tr>
+              <th style="width: 130px;">Código</th>
+              <th>Descrição (Subtraídas todo mês)</th>
+              <th style="width: 160px; text-align: right;">Valor Mensal (R$)</th>
+              <th style="width: 70px; text-align: center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-recurring">
+            <!-- Linhas de despesas fixas -->
+          </tbody>
+          <tfoot>
+            <tr class="quick-add-row">
+              <td>
+                <select id="input-rec-code" class="excel-cell-input">
+                  <!-- Categorias -->
+                </select>
+              </td>
+              <td>
+                <input type="text" id="input-rec-desc" class="excel-cell-input" placeholder="Ex: Aluguel, Internet, Academia...">
+              </td>
+              <td>
+                <input type="number" step="0.01" id="input-rec-val" class="excel-cell-input" placeholder="0,00" style="text-align: right;">
+              </td>
+              <td style="text-align: center;">
+                <button type="button" class="btn-add-row" id="btn-add-recurring">+</button>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- 3. VIEW: RENDAS MENSAIS (Salários) -->
+        <table class="excel-table" id="table-incomes" style="display: none;">
+          <thead>
+            <tr>
+              <th>Integrante da Família / Descrição da Renda</th>
+              <th style="width: 180px; text-align: right;">Salário Mensal (R$)</th>
+              <th style="width: 70px; text-align: center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-incomes">
+            <!-- Linhas de rendas -->
+          </tbody>
+          <tfoot>
+            <tr class="quick-add-row">
+              <td>
+                <input type="text" id="input-inc-name" class="excel-cell-input" placeholder="Ex: Salário Leonardo, Renda Extra...">
+              </td>
+              <td>
+                <input type="number" step="0.01" id="input-inc-val" class="excel-cell-input" placeholder="0,00" style="text-align: right;">
+              </td>
+              <td style="text-align: center;">
+                <button type="button" class="btn-add-row" id="btn-add-income">+</button>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+
+      </div>
+
+      <!-- ABAS MENSAIS ESTILO PLANILHA EXCEL (NO RODAPÉ) -->
+      <nav class="excel-tabs-bar" id="excel-tabs-bar">
+        <!-- Gerado dinamicamente com Janeiro/26 ... Junho/26 (atual) -->
+      </nav>
+
+    </section>
+
+    <!-- SIDEBAR DE AÇÕES (Conforme o Wireframe/Rascunho) -->
+    <aside class="action-sidebar">
+      <button class="sidebar-btn" id="btn-nav-expenses" style="display: none;">
+        <span>📝 Lançar Despesas</span>
+      </button>
+
+      <button class="sidebar-btn" id="btn-nav-recurring">
+        <span>📅 Editar Despesas Mensais</span>
+      </button>
+
+      <button class="sidebar-btn" id="btn-nav-incomes">
+        <span>💵 Editar Renda da Família</span>
+      </button>
+
+      <!-- CARD DE RESUMO FINANCEIRO -->
+      <div class="summary-card-sidebar">
+        <div class="summary-card-title">Balanço do Mês</div>
+        
+        <div class="summary-row">
+          <span>(+) Rendas Mensais:</span>
+          <strong id="sidebar-total-income" style="color: #16a34a;">R$ 0,00</strong>
+        </div>
+
+        <div class="summary-row">
+          <span>(-) Despesas Fixas:</span>
+          <strong id="sidebar-total-recurring" style="color: #e11d48;">R$ 0,00</strong>
+        </div>
+
+        <div class="summary-row">
+          <span>(-) Lançamentos Mês:</span>
+          <strong id="sidebar-total-expenses" style="color: #ea580c;">R$ 0,00</strong>
+        </div>
+
+        <div class="summary-row total">
+          <span>Saldo Restante:</span>
+          <strong id="sidebar-balance">R$ 0,00</strong>
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- MODAL DE CONFIGURAÇÃO DO SUPABASE -->
+  <div class="modal-overlay" id="config-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>⚙️ Conexão com Supabase</h3>
+        <button class="modal-close" id="btn-close-config">&times;</button>
+      </div>
+      <p style="font-size: 0.85rem; color: #64748b;">
+        Conecte seu banco de dados PostgreSQL do Supabase para sincronização em tempo real e em múltiplos dispositivos.
+      </p>
+
+      <div class="form-group">
+        <label for="cfg-supabase-url">Project URL (Supabase)</label>
+        <input type="text" id="cfg-supabase-url" placeholder="https://xyzcompany.supabase.co">
+      </div>
+
+      <div class="form-group">
+        <label for="cfg-supabase-key">Anon Public API Key</label>
+        <input type="password" id="cfg-supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+      </div>
+
+      <div style="font-size: 0.8rem; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+        💡 <strong>Dica da equipe:</strong> O script SQL para criar as tabelas está no arquivo <code>supabase-schema.sql</code>. Se ainda não tiver as chaves, o sistema roda automaticamente com armazenamento local!
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" id="btn-clear-config">Usar Modo Local</button>
+        <button class="btn-primary" id="btn-save-config">Salvar e Conectar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="supabase-client.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
